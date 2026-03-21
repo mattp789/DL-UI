@@ -27,6 +27,19 @@ docker run -v ~/Documents/My\ Games/Deadlock:/logs deadlock-log-monitor
 
 The application will monitor the Deadlock logs directory and output camp events to `logs/camp_events.json`.
 
+To mount a specific deadlock_log.txt file, you can do:
+```bash
+docker run -v /path/to/your/deadlock_log.txt:/logs/deadlock_log.txt deadlock-log-monitor
+```
+
+## File Mounting Requirements
+
+For the application to properly parse and monitor deadlock logs:
+
+1. The container must have access to the deadlock_log.txt file through volume mounting
+2. The application will parse any existing deadlock_log.txt files at startup
+3. The application will monitor for real-time changes to the log file(s)
+
 ## Log Structure
 
 Camp events are stored in JSON format with:
