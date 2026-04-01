@@ -19,14 +19,39 @@ from src.server import create_app
 from src.timers import TimerManager
 
 
+def _pick_template_subdir(templates_dir: Path) -> Path:
+    """Select the best-matching resolution subdirectory based on screen height."""
+    try:
+        import tkinter as tk
+        root = tk.Tk()
+        screen_h = root.winfo_screenheight()
+        root.destroy()
+    except Exception:
+        screen_h = 1080
+
+    candidates = {
+        "1080p": 1080,
+        "1440p": 1440,
+        "2160p": 2160,
+    }
+    best = min(candidates, key=lambda k: abs(candidates[k] - screen_h))
+    subdir = templates_dir / best
+    if subdir.exists():
+        return subdir
+    return templates_dir
+
+
 def load_templates(templates_dir: Path) -> dict:
-    """Load reference template images from the templates directory."""
+    """Load reference template images from the best-matching resolution subdirectory."""
     import cv2
+    subdir = _pick_template_subdir(templates_dir)
     templates = {}
-    for path in templates_dir.glob("*.png"):
+    for path in subdir.glob("*.png"):
         img = cv2.imread(str(path))
         if img is not None:
             templates[path.name] = img
+    if templates:
+        print(f"Loaded {len(templates)} templates from {subdir.name}/")
     return templates
 
 
