@@ -60,6 +60,20 @@ def test_needs_calibration_endpoint():
     assert "needs_calibration" in data
 
 
+def test_needs_calibration_with_config(tmp_path):
+    from src.config import Config
+    config = Config(config_dir=tmp_path)
+    config.capture_region = {"x": 0, "y": 0, "width": 100, "height": 100}
+
+    mgr = _make_timer_manager()
+    app = create_app(mgr, config=config)
+    client = TestClient(app)
+    resp = client.get("/api/needs-calibration")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["needs_calibration"] is False
+
+
 def test_static_index(tmp_path):
     # Create a minimal index.html for testing
     static_dir = tmp_path / "static"

@@ -1,10 +1,12 @@
 """FastAPI server with WebSocket support for real-time timer updates."""
 import json
 from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from src.timers import TimerManager
+from src.config import Config
 
 
 class ConnectionManager:
@@ -20,17 +22,20 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, data: dict):
+        disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(data)
             except Exception:
-                pass
+                disconnected.append(connection)
+        for connection in disconnected:
+            self.disconnect(connection)
 
 
 def create_app(
     timer_manager: TimerManager,
     static_dir: str | None = None,
-    config=None,
+    config: Optional[Config] = None,
 ) -> FastAPI:
     app = FastAPI(title="Deadlock Companion")
     ws_manager = ConnectionManager()
