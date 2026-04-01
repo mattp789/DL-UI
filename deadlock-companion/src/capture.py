@@ -1,3 +1,4 @@
+"""Screen capture engine — captures a screen region using mss."""
 import numpy as np
 import mss
 
