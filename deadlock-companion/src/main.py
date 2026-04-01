@@ -10,6 +10,7 @@ from pathlib import Path
 import uvicorn
 
 from src.calibration import select_region
+from src.resources import get_resource_path
 from src.capture import CaptureEngine
 from src.config import Config
 from src.detector import Detector, DetectionResult
@@ -123,7 +124,7 @@ def main():
     objectives = get_all_objectives()
     timer_manager = TimerManager(objectives)
 
-    templates_dir = Path(__file__).parent.parent / "templates"
+    templates_dir = get_resource_path("templates")
     templates = load_templates(templates_dir)
 
     if not templates:
@@ -136,7 +137,8 @@ def main():
     capture_region = config.capture_region or {"x": 0, "y": 0, "width": 100, "height": 100}
     capture_engine = CaptureEngine(capture_region)
 
-    app = create_app(timer_manager, config=config)
+    static_dir = get_resource_path("static")
+    app = create_app(timer_manager, static_dir=str(static_dir), config=config)
     app_state = {"running": True}
 
     @app.post("/api/recalibrate")

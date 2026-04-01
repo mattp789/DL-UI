@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from src.timers import TimerManager
 from src.config import Config
+from src.resources import get_resource_path
 
 
 class ConnectionManager:
@@ -43,7 +44,7 @@ def create_app(
     app.state.timer_manager = timer_manager
 
     if static_dir is None:
-        static_dir = str(Path(__file__).parent.parent / "static")
+        static_dir = str(get_resource_path("static"))
 
     @app.get("/api/health")
     def health():
