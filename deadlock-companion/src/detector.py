@@ -52,7 +52,7 @@ class Detector:
         cx = int(position[0] * w)
         cy = int(position[1] * h)
 
-        margin = max(tw, th) * 2
+        margin = max(tw, th) * 3
         x1 = max(0, cx - margin)
         y1 = max(0, cy - margin)
         x2 = min(w, cx + margin)
