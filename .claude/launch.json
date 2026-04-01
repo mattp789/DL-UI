@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "deadlock-companion",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "src.main"],
+      "port": 8080
+    },
+    {
+      "name": "deadlock-log-monitor-backend",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["src/main.py"],
+      "port": 8000
+    },
+    {
+      "name": "deadlock-log-monitor-ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3000
+    }
+  ]
+}
