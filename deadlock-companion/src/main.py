@@ -168,7 +168,19 @@ def main():
     if config.needs_calibration:
         print("First run detected — calibrate your minimap in the browser.")
 
-    uvicorn.run(app, host="127.0.0.1", port=8080, log_level="warning")
+    # When frozen by PyInstaller with --noconsole, stdout/stderr are None.
+    # Uvicorn's color formatter calls .isatty() on them and crashes.
+    # Disable uvicorn's log config entirely when running as an exe.
+    if getattr(sys, "frozen", False):
+        log_cfg = None
+    else:
+        log_cfg = {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "handlers": {"default": {"class": "logging.StreamHandler", "stream": "ext://sys.stderr"}},
+            "loggers": {"uvicorn": {"handlers": ["default"], "level": "WARNING"}},
+        }
+    uvicorn.run(app, host="127.0.0.1", port=8080, log_config=log_cfg)
 
 
 if __name__ == "__main__":
