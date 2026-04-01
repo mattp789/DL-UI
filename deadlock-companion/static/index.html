@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadlock Companion</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="top-bar">
+        <span id="status-indicator" class="disconnected"></span>
+        <span id="status-text">Disconnected</span>
+        <span id="match-state">Idle</span>
+        <button id="recalibrate-btn">Recalibrate</button>
+    </div>
+
+    <div id="minimap-container">
+        <div id="minimap">
+            <div id="minimap-bg"></div>
+            <div id="markers"></div>
+        </div>
+        <div id="waiting-overlay" class="hidden">
+            <span>Waiting for match...</span>
+        </div>
+        <div id="calibration-overlay" class="hidden">
+            <span>Calibration needed</span>
+            <button id="calibrate-btn">Calibrate Minimap</button>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
