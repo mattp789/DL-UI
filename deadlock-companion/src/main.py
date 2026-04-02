@@ -9,7 +9,7 @@ from pathlib import Path
 
 import uvicorn
 
-from src.calibration import select_region
+from src.calibration import select_region, calibrate_positions
 from src.resources import get_resource_path
 from src.capture import CaptureEngine
 from src.config import Config
@@ -59,15 +59,23 @@ def load_templates(templates_dir: Path) -> dict:
 def detection_loop(
     capture_engine: CaptureEngine,
     detector: Detector,
-    timer_manager: TimerManager,
+    timer_manager_holder: dict,
     config: Config,
     app_state: dict,
 ):
-    """Run the capture → detect → update loop in a background thread."""
+    """Run the capture → detect → update loop in a background thread.
+
+    Args:
+        timer_manager_holder: A dict with a ``"tm"`` key holding the current
+            :class:`TimerManager`.  The loop reads ``holder["tm"]`` on every
+            iteration so that a rebuilt manager (after position recalibration)
+            is picked up automatically.
+    """
     ACTIVE_FPS = 2
     IDLE_FPS = 0.5
 
     while app_state["running"]:
+        timer_manager = timer_manager_holder["tm"]
         fps = ACTIVE_FPS if timer_manager.match_state == MatchState.ACTIVE else IDLE_FPS
         interval = 1.0 / fps
 
@@ -119,10 +127,30 @@ async def broadcast_loop(app):
         await asyncio.sleep(0.5)
 
 
+def _rebuild_timer_manager(
+    config: Config,
+    timer_manager_holder: dict,
+    app,
+) -> None:
+    """Rebuild the TimerManager from calibrated positions and update app state."""
+    objectives = get_all_objectives(config.objective_positions)
+    new_tm = TimerManager(objectives)
+    timer_manager_holder["tm"] = new_tm
+    app.state.timer_manager = new_tm
+
+
 def main():
     config = Config()
-    objectives = get_all_objectives()
+
+    # Use calibrated positions if already available.
+    objectives = get_all_objectives(
+        config.objective_positions if not config.needs_position_calibration else None
+    )
     timer_manager = TimerManager(objectives)
+
+    # Holder allows the detection loop and recalibration endpoint to share
+    # a reference to the current TimerManager even after it is rebuilt.
+    timer_manager_holder: dict = {"tm": timer_manager}
 
     templates_dir = get_resource_path("templates")
     templates = load_templates(templates_dir)
@@ -148,12 +176,43 @@ def main():
             config.capture_region = region
             config.save()
             capture_engine.update_region(region)
+
+            # Automatically proceed to position calibration when positions
+            # have not yet been set.
+            if config.needs_position_calibration:
+                try:
+                    frame = capture_engine.capture_frame()
+                    pos_result = calibrate_positions(frame)
+                    if pos_result is not None:
+                        config.objective_positions = pos_result or None
+                        config.save()
+                        _rebuild_timer_manager(config, timer_manager_holder, app)
+                except Exception as e:
+                    print(f"Position calibration error (skipped): {e}")
+
             return {"ok": True, "region": region}
         return {"ok": False}
 
+    @app.post("/api/recalibrate-positions")
+    def recalibrate_positions():
+        """Capture a fresh frame and open the position calibration window."""
+        try:
+            frame = capture_engine.capture_frame()
+        except Exception as e:
+            return {"ok": False, "error": f"Could not capture frame: {e}"}
+
+        pos_result = calibrate_positions(frame)
+        if pos_result is None:
+            return {"ok": False, "cancelled": True}
+
+        config.objective_positions = pos_result if pos_result else None
+        config.save()
+        _rebuild_timer_manager(config, timer_manager_holder, app)
+        return {"ok": True, "types_calibrated": list(pos_result.keys())}
+
     detection_thread = threading.Thread(
         target=detection_loop,
-        args=(capture_engine, detector, timer_manager, config, app_state),
+        args=(capture_engine, detector, timer_manager_holder, config, app_state),
         daemon=True,
     )
     detection_thread.start()
@@ -167,6 +226,8 @@ def main():
 
     if config.needs_calibration:
         print("First run detected — calibrate your minimap in the browser.")
+    elif config.needs_position_calibration:
+        print("Minimap region set — use the browser to calibrate objective positions.")
 
     # When frozen by PyInstaller with --noconsole, stdout/stderr are None.
     # Uvicorn's color formatter calls .isatty() on them and crashes.

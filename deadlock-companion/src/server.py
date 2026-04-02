@@ -67,6 +67,11 @@ def create_app(
         needs = config.needs_calibration if config else True
         return {"needs_calibration": needs}
 
+    @app.get("/api/needs-position-calibration")
+    def needs_position_calibration():
+        needs = config.needs_position_calibration if config else True
+        return {"needs_calibration": needs}
+
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
         await ws_manager.connect(websocket)
